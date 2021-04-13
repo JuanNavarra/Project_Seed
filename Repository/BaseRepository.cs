@@ -5,15 +5,14 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Linq.Expressions;
-    using System.Text;
     using System.Threading.Tasks;
 
     public class BaseRepository : IBaseRepository
     {
-        #region Propiedades
+        #region Properties
         private readonly IUnitOfWork unitOfWork;
         #endregion
-        #region Constructores
+        #region Constructors
         public BaseRepository(IUnitOfWork unitOfWork)
         {
             this.unitOfWork = unitOfWork;

@@ -1,5 +1,6 @@
 ﻿namespace Services
 {
+    using Dtos;
     using Microsoft.IdentityModel.Tokens;
     using System;
     using System.IdentityModel.Tokens.Jwt;
@@ -21,33 +22,71 @@
         /// <param name="login"></param>
         /// <param name="apiAuth"></param>
         /// <returns></returns>
-        public static JwtSecurityToken GenerateToken(object login, string[] apiAuth)
+        public static JwtSecurityToken GenerateToken(UserDto login, string[] apiAuth, TokenExpiresEnum tokenExpires)
         {
             string ValidIssuer = apiAuth[0];
             string ValidAudience = apiAuth[1];
             SymmetricSecurityKey IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(apiAuth[2]));
 
-            DateTime dtDateExpirationToken;
+            DateTime dtDateExpirationToken = new DateTime();
             DateTime now = DateTime.Now;
-            //La fecha de expiracion sera el mismo dia a las 12 de la noche
-            dtDateExpirationToken = new DateTime(now.Year, now.Month, now.Day, 23, 59, 59, 999);
-
+            switch (tokenExpires)
+            {
+                case TokenExpiresEnum.login:
+                    //La fecha de expiracion sera el mismo dia a las 12 de la noche
+                    dtDateExpirationToken = new DateTime(now.Year, now.Month, now.Day, 23, 59, 59, 999);
+                    break;
+                case TokenExpiresEnum.confirmation:
+                    dtDateExpirationToken = DateTime.Now.AddMinutes(10);
+                    break;
+                default:
+                    break;
+            }
             Claim[] claims = new[]
             {
-                new Claim(UserValue, login.ToString())
+                new Claim(UserValue, login.Username)
             };
-
             return new JwtSecurityToken
             (
                 issuer: ValidIssuer,
                 audience: ValidAudience,
                 claims: claims,
-                expires: dtDateExpirationToken,
                 notBefore: now,
+                expires: dtDateExpirationToken,
                 signingCredentials: new SigningCredentials(IssuerSigningKey, SecurityAlgorithms.HmacSha256)
             );
         }
 
+        /// <summary>
+        /// Retorna true si el token aun es valido, de lo contrario retorna false
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="apiAuth"></param>
+        /// <returns></returns>
+        public static bool ValidateCurrentToken(string token, string[] apiAuth)
+        {
+            string ValidIssuer = apiAuth[0];
+            string ValidAudience = apiAuth[1];
+            SymmetricSecurityKey IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(apiAuth[2]));
+            var tokenHandler = new JwtSecurityTokenHandler();
+            try
+            {
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidIssuer = ValidIssuer,
+                    ValidAudience = ValidAudience,
+                    IssuerSigningKey = IssuerSigningKey
+                }, out SecurityToken validatedToken);
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
 
         /// <summary>
         /// Encripta en base 64 un texto plano
